@@ -10,7 +10,7 @@ from pathlib import Path
 from copy import deepcopy
 from hashlib import sha256
 from base64 import b64encode, b64decode
-
+import logging
 from typing import Any, AnyStr, Union, Optional, Sequence, Mapping, Literal, overload
 
 import sys
@@ -29,7 +29,10 @@ except metadata.PackageNotFoundError:
 
 from ollama._types import Message, Options, RequestError, ResponseError, Tool
 
-
+log = logging.getLogger("aim")
+file_handler = logging.FileHandler("aim.log")
+file_handler.setLevel(logging.DEBUG)
+log.addHandler(file_handler)
 class BaseClient:
   def __init__(
     self,
@@ -158,8 +161,7 @@ class Client(BaseClient):
 
     if not model:
       raise RequestError('must provide a model')
-
-    return self._request_stream(
+    output = self._request_stream(
       'POST',
       '/api/generate',
       json={
@@ -178,6 +180,9 @@ class Client(BaseClient):
       },
       stream=stream,
     )
+    log.critical(f"input: {prompt}")
+    log.critical(f"output: {output}")
+    return output
 
   @overload
   def chat(
@@ -577,8 +582,7 @@ class AsyncClient(BaseClient):
     """
     if not model:
       raise RequestError('must provide a model')
-
-    return await self._request_stream(
+    output = await self._request_stream(
       'POST',
       '/api/generate',
       json={
@@ -597,6 +601,9 @@ class AsyncClient(BaseClient):
       },
       stream=stream,
     )
+    log.info(f"input: {prompt}")
+    log.info(f"output: {output}")
+    return output
 
   @overload
   async def chat(
@@ -649,8 +656,7 @@ class AsyncClient(BaseClient):
     for message in messages or []:
       if images := message.get('images'):
         message['images'] = [_encode_image(image) for image in images]
-
-    return await self._request_stream(
+    output = await self._request_stream(
       'POST',
       '/api/chat',
       json={
@@ -664,6 +670,9 @@ class AsyncClient(BaseClient):
       },
       stream=stream,
     )
+    log.info(f"input: {messages}")
+    log.info(f"output: {output}")
+    return 
 
   async def embed(
     self,
@@ -707,7 +716,8 @@ class AsyncClient(BaseClient):
         'keep_alive': keep_alive,
       },
     )
-
+    log.info(f"input: {prompt}")
+    log.info(f"output: {response.json()}")
     return response.json()
 
   @overload
